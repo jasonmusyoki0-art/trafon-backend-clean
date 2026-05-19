@@ -1,0 +1,5 @@
+node_modules
+.env
+*.json
+trafon-insurance-firebase-adminsdk-fbsvc-c049a632b0.json
+*firebase*.json
