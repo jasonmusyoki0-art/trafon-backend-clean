@@ -15,8 +15,14 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
 }
 
 admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
+    credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+    })
 })
+
+const db = admin.firestore()
 
 const axios = require("axios")
 const nodemailer = require("nodemailer")
@@ -41,12 +47,62 @@ app.get("/", (req, res) => {
 })
 
 
-app.post("/callback", (req, res) => {
+app.post("/callback", async (req, res) => {
 
-    console.log("MPESA CALLBACK:")
-    console.log(JSON.stringify(req.body, null, 2))
+    try {
 
-    res.sendStatus(200)
+        console.log("MPESA CALLBACK")
+
+        const callback =
+            req.body.Body.stkCallback
+
+        console.log(callback)
+
+        if (callback.ResultCode === 0) {
+
+            const items =
+                callback.CallbackMetadata.Item
+
+            let receipt = ""
+            let amount = 0
+            let phone = ""
+
+            items.forEach(item => {
+
+                if (item.Name === "MpesaReceiptNumber") {
+                    receipt = item.Value
+                }
+
+                if (item.Name === "Amount") {
+                    amount = item.Value
+                }
+
+                if (item.Name === "PhoneNumber") {
+                    phone = item.Value
+                }
+
+            })
+
+            await db.collection("payments")
+                .add({
+                    phone,
+                    amount,
+                    receipt,
+                    status: "completed",
+                    createdAt: new Date()
+                })
+
+            console.log("PAYMENT SAVED")
+        }
+
+        res.sendStatus(200)
+
+    } catch (error) {
+
+        console.log(error)
+
+        res.sendStatus(500)
+    }
 
 })
 
