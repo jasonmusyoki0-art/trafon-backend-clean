@@ -1,7 +1,18 @@
 require("dotenv").config()
 
 const admin = require("firebase-admin")
-const serviceAccount = require("./trafon-insurance-firebase-adminsdk-fbsvc-c049a632b0.json")
+
+let serviceAccount
+
+if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
+} else if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+    serviceAccount = JSON.parse(
+        Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, "base64").toString("utf8")
+    )
+} else {
+    serviceAccount = require("./trafon-insurance-firebase-adminsdk-fbsvc-c049a632b0.json")
+}
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
