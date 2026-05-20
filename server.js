@@ -41,6 +41,15 @@ app.get("/", (req, res) => {
     res.send("Trafon Backend Running")
 })
 
+
+app.post("/callback", (req, res) => {
+
+    console.log("MPESA CALLBACK:")
+    console.log(JSON.stringify(req.body, null, 2))
+
+    res.sendStatus(200)
+
+})
 app.post("/stkpush", async (req, res) => {
     try {
         const { phone, amount } = req.body
