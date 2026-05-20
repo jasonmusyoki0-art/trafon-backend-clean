@@ -18,6 +18,7 @@ admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
 })
 
+const axios = require("axios")
 const nodemailer = require("nodemailer")
 const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -50,52 +51,81 @@ app.post("/callback", (req, res) => {
     res.sendStatus(200)
 
 })
+
+async function getAccessToken() {
+
+    const consumerKey = process.env.CONSUMER_KEY
+    const consumerSecret = process.env.CONSUMER_SECRET
+
+    const auth = Buffer.from(
+        `${consumerKey}:${consumerSecret}`
+    ).toString("base64")
+
+    const response = await axios.get(
+        "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials",
+        {
+            headers: {
+                Authorization: `Basic ${auth}`
+            }
+        }
+    )
+
+    return response.data.access_token
+}
 app.post("/stkpush", async (req, res) => {
+
     try {
-        const { phone, amount } = req.body
 
-        const auth = Buffer.from(
-            process.env.CONSUMER_KEY + ":" + process.env.CONSUMER_SECRET
-        ).toString("base64")
+        const token = await getAccessToken()
 
-        const tokenResponse = await axios.get(
-            "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials",
-            { headers: { Authorization: `Basic ${auth}` } }
-        )
+        const phone = req.body.phone
 
-        const accessToken = tokenResponse.data.access_token
+        const shortcode = process.env.SHORTCODE
+        const passkey = process.env.PASSKEY
 
-        const timestamp = moment().format("YYYYMMDDHHmmss")
+        const timestamp = new Date()
+            .toISOString()
+            .replace(/[-:.TZ]/g, "")
+            .slice(0, 14)
 
         const password = Buffer.from(
-            process.env.SHORTCODE + process.env.PASSKEY + timestamp
+            shortcode + passkey + timestamp
         ).toString("base64")
 
         const response = await axios.post(
             "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
             {
-                BusinessShortCode: process.env.SHORTCODE,
+                BusinessShortCode: shortcode,
                 Password: password,
                 Timestamp: timestamp,
                 TransactionType: "CustomerPayBillOnline",
-                Amount: amount,
+                Amount: 1,
                 PartyA: phone,
-                PartyB: process.env.SHORTCODE,
+                PartyB: shortcode,
                 PhoneNumber: phone,
                 CallBackURL: process.env.CALLBACK_URL,
-                AccountReference: "Trafon Insurance",
+                AccountReference: "Trafon",
                 TransactionDesc: "Insurance Payment"
             },
-            { headers: { Authorization: `Bearer ${accessToken}` } }
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
         )
 
         res.json(response.data)
+
     } catch (error) {
-        console.log(error.response?.data)
+
+        console.log(error.response?.data || error.message)
+
         res.status(500).json({
-            error: error.response?.data || error.message
+            error: "STK Push Failed"
         })
+
     }
+
 })
 
 app.post("/send-email", async (req, res) => {
