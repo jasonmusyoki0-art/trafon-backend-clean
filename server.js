@@ -29,9 +29,7 @@ const transporter = nodemailer.createTransport({
 })
 
 const express = require("express")
-const axios = require("axios")
 const cors = require("cors")
-const moment = require("moment")
 
 const app = express()
 
@@ -159,19 +157,6 @@ app.post("/send-notification", async (req, res) => {
         res.json(response)
     } catch (error) {
         res.status(500).json({ error: error.message })
-    }
-})
-
-app.post("/callback", async (req, res) => {
-    try {
-        console.log("M-Pesa Callback:", JSON.stringify(req.body, null, 2))
-
-        res.json({
-            ResultCode: 0,
-            ResultDesc: "Accepted"
-        })
-    } catch (error) {
-        console.log(error)
     }
 })
 
