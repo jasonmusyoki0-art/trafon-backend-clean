@@ -106,6 +106,28 @@ app.post("/callback", async (req, res) => {
 
 })
 
+const policyNumber =
+    "TRF-" + Date.now()
+
+const expiryDate = new Date()
+
+expiryDate.setMonth(
+    expiryDate.getMonth() + 1
+)
+
+await db.collection("policies")
+    .add({
+
+        phone,
+        policyNumber,
+        status: "active",
+        amount,
+        createdAt: new Date(),
+        expiryDate
+    })
+
+console.log("POLICY ACTIVATED")
+
 async function getAccessToken() {
 
     const consumerKey = process.env.CONSUMER_KEY
